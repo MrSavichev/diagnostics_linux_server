@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Recommendations engine for diagnostics.py.
-Analyzes collected metrics and returns prioritized action items.
+Движок рекомендаций для diagnostics.py.
 
-Usage:
-    Called automatically by diagnostics.py at the end of the report.
-    Can also be run standalone to test logic:
-        python3 recommendations.py
+Как используется:
+    Этот файл НЕ нужно запускать вручную для реальной диагностики.
+    diagnostics.py автоматически вызывает generate_recommendations()
+    в конце своей работы, передавая собранные метрики из памяти.
+
+    Запуск напрямую (python3 recommendations.py) — это тестовый режим:
+    функция запустится на синтетических данных (имитация проблемного сервера),
+    чтобы можно было посмотреть как выглядят рекомендации.
 """
 
 from typing import Any
