@@ -424,10 +424,24 @@ def build_report() -> str:
     return "\n".join(lines)
 
 
+def check_root() -> bool:
+    """Return True if running as root."""
+    return os.geteuid() == 0
+
+
 def main():
     if sys.platform.startswith("win"):
         print("[!] This script is designed for Linux (Debian). Exiting.")
         sys.exit(1)
+
+    if not check_root():
+        print("[!] WARNING: Not running as root (sudo).")
+        print("    Some checks will be limited:")
+        print("    - Auth log (/var/log/auth.log)")
+        print("    - Open files held by processes (lsof)")
+        print("    - LVM info (vgs/lvs)")
+        print("    - Some Docker stats")
+        print("    Re-run with sudo for full results.\n")
 
     print("\n[*] Starting server diagnostics...\n")
     report = build_report()
@@ -450,11 +464,13 @@ def main():
 
     print("\n" + report)
 
-    filename = f"report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Results")
+    os.makedirs(results_dir, exist_ok=True)
+    filename = os.path.join(results_dir, f"report_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(report)
 
-    print(f"\n[✓] Report saved to: {os.path.abspath(filename)}\n")
+    print(f"\n[✓] Report saved to: {filename}\n")
 
 
 if __name__ == "__main__":

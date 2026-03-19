@@ -1,4 +1,4 @@
-report_*.txt
+Results/*.txt
 __pycache__/
 *.pyc
 .env
