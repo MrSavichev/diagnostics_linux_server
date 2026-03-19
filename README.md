@@ -8,6 +8,71 @@
 |------|-----------|
 | `diagnostics.py` | Главный скрипт. Собирает метрики и формирует отчёт |
 | `recommendations.py` | Движок рекомендаций. Анализирует метрики, выдаёт приоритизированные действия |
+| `check_deps.sh` | Проверяет наличие всех зависимостей перед запуском |
+
+---
+
+## Зависимости
+
+### Шаг 0 — проверить всё одной командой
+
+```bash
+bash check_deps.sh
+```
+
+Скрипт покажет что установлено, что отсутствует и выдаст готовую команду установки.
+
+---
+
+### Обязательные зависимости
+
+Без них скрипт не запустится или не выдаст полезных данных.
+
+| Утилита | Пакет | Зачем |
+|---------|-------|-------|
+| `python3` | `python3` | запуск скрипта |
+| `ps`, `free`, `vmstat`, `uptime` | `procps` | процессы, память, нагрузка |
+| `df`, `du`, `find`, `nproc` | `coreutils`, `findutils` | диск, файлы |
+| `lscpu`, `swapon` | `util-linux` | CPU и swap |
+| `ip`, `ss` | `iproute2` | сеть |
+| `systemctl`, `journalctl` | `systemd` | сервисы и журналы |
+| `last` | `util-linux` | последние входы |
+| `lsb_release` | `lsb-release` | версия ОС |
+| `apt` | `apt` | список обновлений |
+
+**Установка (если что-то отсутствует):**
+```bash
+sudo apt-get update && sudo apt-get install -y \
+  python3 procps coreutils findutils util-linux \
+  iproute2 systemd lsb-release apt
+```
+
+> На большинстве систем Debian/Ubuntu всё это установлено по умолчанию.
+> Если отсутствует `python3` — установите его первым: `sudo apt-get install -y python3`
+
+---
+
+### Опциональные зависимости
+
+Скрипт запустится без них, но часть проверок будет пропущена или заменена на упрощённый аналог.
+
+| Утилита | Пакет | Какая проверка | Что будет без неё |
+|---------|-------|---------------|-------------------|
+| `mpstat` | `sysstat` | CPU per-core breakdown | заменяется на `top -b -n1` |
+| `iostat` | `sysstat` | расширенная disk I/O статистика | пропускается |
+| `lsof` | `lsof` | удалённые-но-открытые файлы (du vs df) | пропускается |
+| `vgs`, `lvs` | `lvm2` | информация об LVM разделах | пропускается |
+| `docker` | `docker.io` / `docker-ce` | все docker-проверки | пропускается |
+| `ufw` | `ufw` | firewall | fallback на iptables |
+| `iptables` | `iptables` | firewall (fallback) | пропускается |
+| `atop` | `atop` | размер atop-логов | пропускается |
+
+**Рекомендуемая установка опциональных пакетов:**
+```bash
+sudo apt-get install -y sysstat lsof lvm2
+```
+
+---
 
 ## Что проверяет
 
@@ -34,7 +99,7 @@
 | `/var/lib` breakdown | Docker overlay2 часто скрыт здесь |
 | `/var/cache` breakdown | apt cache до 1 ГБ+ |
 | Файлы >100MB | Быстрый поиск «жирных» файлов |
-| Deleted-but-held files | Объясняет расхождение du vs df |
+| Deleted-but-held files | Объясняет расхождение du vs df (требует `lsof`) |
 
 ### Docker
 | Проверка | Зачем |
@@ -54,6 +119,8 @@
 - Запущенные и упавшие systemd-сервисы
 - Последние входы, auth.log
 
+---
+
 ## Рекомендации
 
 После сбора данных `recommendations.py` автоматически анализирует метрики и выдаёт приоритизированные рекомендации:
@@ -68,39 +135,45 @@
 - **Problem** — что именно обнаружено
 - **Commands** — готовые команды для устранения
 
-## Требования
+---
 
-- Python 3.6+
-- Linux Debian / Ubuntu
-- Для полного доступа к логам и LVM рекомендуется `sudo`
-- `sysstat` для mpstat/iostat/pidstat: `sudo apt install sysstat`
-
-## Установка
+## Установка и запуск
 
 ```bash
+# 1. Клонировать репозиторий
 git clone https://github.com/MrSavichev/diagnostics_linux_server.git
 cd diagnostics_linux_server
+
+# 2. Проверить зависимости
+bash check_deps.sh
+
+# 3. Установить недостающее (команда будет выведена check_deps.sh)
+sudo apt-get install -y python3 sysstat lsof lvm2
+
+# 4. Запустить диагностику
+sudo python3 diagnostics.py
 ```
 
-## Использование
+### Другие варианты запуска
 
 ```bash
-# Обычный запуск
+# Без sudo (часть проверок будет недоступна)
 python3 diagnostics.py
 
-# С sudo (открывает доступ к auth.log, lsof, LVM)
-sudo python3 diagnostics.py
-
-# Только рекомендации (тест на синтетических метриках)
+# Только проверить рекомендации на тестовых данных
 python3 recommendations.py
 ```
+
+---
 
 ## Вывод
 
 1. Прогресс проверок в консоль
 2. Полный отчёт с метриками
 3. Блок рекомендаций (CRITICAL → WARN → INFO)
-4. Файл `report_YYYYMMDD_HHMMSS.txt`
+4. Файл `report_YYYYMMDD_HHMMSS.txt` в текущей директории
+
+---
 
 ## Лицензия
 
